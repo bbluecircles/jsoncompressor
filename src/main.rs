@@ -24,7 +24,7 @@ impl CompressStrategy for JsonCompressor {
         let mut e = zlibEncoder::new(Vec::new(), Compression::default());
         e.write_all(input);
         let compressed_bytes = e.finish();
-        let str = "hello";
+        let str = "hello testing..";
         return input;
     }
 }

@@ -1,5 +1,5 @@
 extern crate uuid;
-use std::process::id;
+use std::fmt::Error;
 use uuid::Uuid;
 use std::io::prelude::*;
 use flate2::Compression;
@@ -16,16 +16,14 @@ impl File {
     }
 }
 trait CompressStrategy {
-    fn compress(&self, input: &str) -> &str;
+    fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
 }
 struct JsonCompressor;
 impl CompressStrategy for JsonCompressor {
-    fn compress(&self, input: &str) -> &str {
-        let mut e = zlibEncoder::new(Vec::new(), Compression::default());
-        e.write_all(input);
-        let compressed_bytes = e.finish();
-        let str = "hello testing..";
-        return input;
+    fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+        let _ = e.write_all(input);
+        return e.finish();
     }
 }
 fn main() {

@@ -1,7 +1,6 @@
 extern crate uuid;
 use std::io;
 use std::io::prelude::*;
-use std::fs;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
 

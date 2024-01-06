@@ -1,23 +1,11 @@
 extern crate uuid;
-use std::fmt::Error;
 use std::io;
 use std::io::prelude::*;
 use std::fs;
-use uuid::Uuid;
-use std::io::prelude::*;
 use flate2::Compression;
+use flate2::Decompress;
 use flate2::write::ZlibEncoder;
 
-struct File {
-    file_id: Uuid,
-    file_data: String
-}
-impl File {
-    fn new(file_data: String) -> File {
-        let file_id: Uuid = Uuid::new_v4();
-        File { file_id, file_data }
-    }
-}
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
 }
@@ -29,6 +17,7 @@ impl CompressStrategy for JsonCompressor {
         return e.finish();
     }
 }
+
 
 pub fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let compress_strategy: JsonCompressor = JsonCompressor;
@@ -52,4 +41,8 @@ fn main() {
     let vec = result.expect("Failed to compress JSON file.");
     // Print the number of bytes after compressing.
     println!("Number of bytes read after parse: {}", vec.len());
+    let mut compressed_file = fs::File::create("compressed.json")
+    .expect("Failed to create file.");
+    compressed_file.write_all(&vec).expect("Failed to write compressed data to file.");
+    println!("Done!");
 }

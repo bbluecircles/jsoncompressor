@@ -1,43 +1,4 @@
-extern crate uuid;
-use std::io;
-use std::io::prelude::*;
-use flate2::Compression;
-use flate2::bufread::{GzDecoder, GzEncoder};
 
-trait CompressStrategy {
-    fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
-}
-struct JsonCompressor;
-impl CompressStrategy for JsonCompressor {
-    fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-        let mut gz = GzEncoder::new(input, Compression::best());
-        let mut buffer = Vec::new();
-        gz.read_to_end(&mut buffer)?;
-        Ok(buffer)
-    }
-}
-
-trait DeCompressStrategy {
-    fn decompress(&self, input: &[u8]) -> io::Result<String>;
-}
-
-struct JsonDeCompressor;
-impl DeCompressStrategy for JsonDeCompressor {
-    fn decompress(&self, input: &[u8]) -> Result<String, std::io::Error>{
-        let mut gz: GzDecoder<&[u8]> = GzDecoder::new(input);
-        let mut s = String::new();
-        gz.read_to_string(&mut s)?;
-        Ok(s)
-    }
-}
-pub fn decompress_json(file_content: &[u8]) -> Result<String, std::io::Error> {
-    let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
-    return decompress_strategy.decompress(file_content);
-}
-pub fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    let compress_strategy: JsonCompressor = JsonCompressor;
-    return compress_strategy.compress(file_content);
-}
 fn main() {
     // let should_decompress: bool = true;
     // let mut file_path = String::new();

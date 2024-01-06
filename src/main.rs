@@ -3,8 +3,7 @@ use std::io;
 use std::io::prelude::*;
 use std::fs;
 use flate2::Compression;
-use flate2::bufread::GzDecoder;
-use flate2::write::ZlibEncoder;
+use flate2::bufread::{GzDecoder, GzEncoder};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -12,9 +11,10 @@ trait CompressStrategy {
 struct JsonCompressor;
 impl CompressStrategy for JsonCompressor {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
-        let _ = e.write_all(input);
-        return e.finish();
+        let mut gz = GzEncoder::new(input, Compression::best());
+        let mut buffer = Vec::new();
+        gz.read_to_end(&mut buffer)?;
+        Ok(buffer)
     }
 }
 

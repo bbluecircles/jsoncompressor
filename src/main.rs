@@ -26,6 +26,11 @@ impl CompressStrategy for JsonCompressor {
         return e.finish();
     }
 }
+
+pub fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+    let compress_strategy: JsonCompressor = JsonCompressor;
+    return compress_strategy.compress(file_content);
+}
 fn main() {
     println!("Hello, world!");
 }

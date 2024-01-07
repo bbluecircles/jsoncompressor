@@ -28,18 +28,24 @@ const runFileAction = function(url, fileData) {
 }
 const server = http.createServer((req, res) => {
     const { url, method } = req;
+    // If not a POST request using the following endpoints:
+    // "/compress" OR "/decompress"
+    // End request and return error message.
     if (!isValidRequest(url, method)) {
         console.log("Invalid request.");
         res.writeHead(500, { 'Connection': 'close' });
         res.end('Invalid request!');
     }
+    // Instantiate busboy.
     const busboy = new Busboy({ headers: req.headers });
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        // If invalid filetype, end request and return error message.
         if (mimetype !== 'application/json') {
             console.log("Invalid file type.");
             res.writeHead(500, { 'Connection': 'close' });
             res.end('Invalid filetype: File must be a JSON file!');
         }
+        // This will store the chunks streamed from file.
         const chunks = [];
         // Stream the file data and append chunk into 'chunks' array.
         file.on('data', (chunk) => {

@@ -1,5 +1,17 @@
 import { decompress_json, compress_json } from './pkg';
 
+class Utils {
+    static downloadURL = (data, fileName) => {
+        const a = document.createElement('a');
+        a.href = data;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        a.click();
+        a.remove();
+    }
+}
+
 class CompressPage extends HTMLElement {
     constructor() {
         super();
@@ -36,6 +48,26 @@ class FileUpload extends HTMLElement {
     }
     connectedCallback() {
         this.render();
+    }
+    fileUploadEventHandler = (e) => {
+        const file = e.target.files[0];
+        console.log("File: ", file);
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const arrayBuffer = evt.target.result;
+                // Convert buffer to Unit8Array
+                const bufferToU8Vector = new Uint8Array(arrayBuffer);
+                const result = compress_json(bufferToU8Vector);
+                console.log(result);
+                const toBlob = new Blob([result], { type: 'application/octet-stream' });
+                const newFileName = 'toCompressed.json';
+                const compressedFile = new File([toBlob], newFileName, { type: toBlob.type });
+                const compressedFileURL = URL.createObjectURL(compressedFile);
+                Utils.downloadURL(compressedFileURL, newFileName);
+            }
+            reader.readAsArrayBuffer(file);
+        }
     }
     render = () => {
         this.shadowRoot.innerHTML = `
@@ -120,7 +152,9 @@ class FileUpload extends HTMLElement {
                 <i class="fa-solid fa-upload"></i>
                 <input type="file" id="upload-json-input" />
             </div>
-        `
+        `;
+        const inputElement = this.shadowRoot.getElementById('upload-json-input');
+        inputElement.addEventListener('change', this.fileUploadEventHandler);
     }
 }
 customElements.define('file-upload', FileUpload);

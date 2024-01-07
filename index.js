@@ -1,4 +1,5 @@
 import { decompress_json, compress_json } from './pkg';
+import '@carbon/web-components/es/components/ui-shell/index.js';
 
 class Utils {
     static downloadURL = (data, fileName) => {
@@ -21,7 +22,7 @@ class CompressPage extends HTMLElement {
         this.render();
     }
     render = () => {
-        this.shadowRoot.innerHTML = `
+        this.shadowRoot.innerHTML = /*html*/`
             <style>
                 .page {
                     display: grid;
@@ -31,133 +32,79 @@ class CompressPage extends HTMLElement {
                     grid-template-rows: auto;
                     place-content: center;
                 }
-                #compress-json 
+
             </style>
             <main id="compress-json" class="page">
-                <slot></slot>
+                <cds-header aria-label="IBM Platform Name">
+                <cds-header-menu-button
+                button-label-active="Close menu"
+                button-label-inactive="Open menu"></cds-header-menu-button>
+                <cds-header-name href="javascript:void 0" prefix="IBM"
+                >[Platform]</cds-header-name
+                >
+                <cds-header-nav menu-bar-label="IBM [Platform]">
+                <cds-header-nav-item href="javascript:void 0">Link 1</cds-header-nav-item>
+                <cds-header-nav-item href="javascript:void 0">Link 2</cds-header-nav-item>
+                <cds-header-nav-item href="javascript:void 0">Link 3</cds-header-nav-item>
+                <cds-header-menu menu-label="Link 4" trigger-content="Link 4">
+                    <cds-header-menu-item href="javascript:void 0"
+                    >Sub-link 1</cds-header-menu-item
+                    >
+                    <cds-header-menu-item href="javascript:void 0"
+                    >Sub-link 2</cds-header-menu-item
+                    >
+                    <cds-header-menu-item href="javascript:void 0"
+                    >Sub-link 3</cds-header-menu-item
+                    >
+                </cds-header-menu>
+                </cds-header-nav>
+            </cds-header>
+            <cds-side-nav aria-label="Side navigation" expanded>
+                <cds-side-nav-items>
+                <cds-side-nav-menu title="L0 menu">
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                </cds-side-nav-menu>
+                <cds-side-nav-menu title="L0 menu">
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item active aria-current="page" href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                </cds-side-nav-menu>
+                <cds-side-nav-menu title="L0 menu">
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                    <cds-side-nav-menu-item href="www.ibm.com">
+                    L0 menu item
+                    </cds-side-nav-menu-item>
+                </cds-side-nav-menu>
+                <cds-side-nav-divider></cds-side-nav-divider>
+                <cds-side-nav-link href="javascript:void(0)">L0 link</cds-side-nav-link>
+                <cds-side-nav-link href="javascript:void(0)">L0 link</cds-side-nav-link>
+                </cds-side-nav-items>
+            </cds-side-nav>
             </main>
         `;
     }
 }
 customElements.define('compress-page', CompressPage);
-class FileUpload extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        this.fileContents = '';
-    }
-    connectedCallback() {
-        this.render();
-    }
-    fileUploadEventHandler = (e) => {
-        const file = e.target.files[0];
-        console.log("File: ", file);
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const arrayBuffer = evt.target.result;
-                // Convert buffer to Unit8Array
-                const bufferToU8Vector = new Uint8Array(arrayBuffer);
-                const result = compress_json(bufferToU8Vector);
-                console.log(result);
-                const toBlob = new Blob([result], { type: 'application/octet-stream' });
-                const newFileName = 'toCompressed.json';
-                const compressedFile = new File([toBlob], newFileName, { type: toBlob.type });
-                const compressedFileURL = URL.createObjectURL(compressedFile);
-                Utils.downloadURL(compressedFileURL, newFileName);
-            }
-            reader.readAsArrayBuffer(file);
-        }
-    }
-    render = () => {
-        this.shadowRoot.innerHTML = `
-            <style>
-                @import url('https://ka-f.fontawesome.com/releases/v6.5.1/css/free.min.css?token=f17e33830e');
 
-                .file-upload {
-                    position: relative;
-                    color: #ccc;
-                    display: grid;
-                    place-content: center;
-                    width: 150px;
-                    height: 150px;
-                    cursor: pointer;
-                    transition: 0.2s transform ease;
-                }
-                .file-upload #upload-json-input {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    cursor: pointer;
-                    opacity: 0;
-                }
-                .file-upload:hover i {
-                    color: rgb(136, 183, 225);
-                }
-                .file-upload:hover {
-                    transform: translateY(-10px);
-                }
-                .file-upload i {
-                    font-size: 5rem;
-                    transition: 0.2s color ease;
-                }
-                .file-upload span {
-                    position: absolute;
-                }
-                .file-upload span[pos="top-left"] {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 25px;
-                    height: 25px;
-                    border-top: 10px solid #ccc;
-                    border-left: 10px solid #ccc;
-                    border-radius: 5px;
-
-                }
-                .file-upload span[pos="top-right"] {
-                    position: absolute;
-                    top: 0;
-                    right: 0;
-                    width: 25px;
-                    height: 25px;
-                    border-top: 10px solid #ccc;
-                    border-right: 10px solid #ccc;
-                    border-radius: 5px;
-                }
-                .file-upload span[pos="bottom-left"] {
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 25px;
-                    height: 25px;
-                    border-bottom: 10px solid #ccc;
-                    border-left: 10px solid #ccc;
-                    border-radius: 5px;
-
-                }
-                .file-upload span[pos="bottom-right"] {
-                    position: absolute;
-                    right: 0;
-                    bottom: 0;
-                    width: 25px;
-                    height: 25px;
-                    border-bottom: 10px solid #ccc;
-                    border-right: 10px solid #ccc;
-                    border-radius: 5px;
-                }
-            </style>
-            <div class="file-upload">
-                <span pos="top-left"></span><span pos="top-right"></span><span pos="bottom-left"></span><span pos="bottom-right"></span>
-                <i class="fa-solid fa-upload"></i>
-                <input type="file" id="upload-json-input" />
-            </div>
-        `;
-        const inputElement = this.shadowRoot.getElementById('upload-json-input');
-        inputElement.addEventListener('change', this.fileUploadEventHandler);
-    }
-}
-customElements.define('file-upload', FileUpload);
 class App {
     constructor() {
         this.init();

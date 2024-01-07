@@ -38,6 +38,7 @@ pub fn decompress_json(file_content: &[u8]) -> Result<String, JsValue> {
     decompress_strategy.decompress(file_content)
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
+#[wasm_bindgen]
 pub fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, JsValue> {
     let compress_strategy: JsonCompressor = JsonCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.

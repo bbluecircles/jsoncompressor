@@ -12,6 +12,19 @@ const isValidRequest = function(url, method) {
     if (method !== 'POST') return false;
     return true;
 }
+const isValidFileName = function(fileName) {
+    const regex = new RegExp(/\.json/g, 'g');
+    let arr;
+    let matchesFound = 0;
+    while((arr = regex.exec(fileName)) !== null) {
+        matchesFound++;
+    }
+    // If '.json' is not found or found more than once, file is invalid.
+    if (matchesFound === 0 || matchesFound > 1) {
+        return false;
+    }
+    return true;
+}
 const runFileAction = function(url, fileData) {
     let newFileData;
     switch(url) {
@@ -40,7 +53,10 @@ const server = http.createServer((req, res) => {
     const busboy = new Busboy({ headers: req.headers });
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
         // If invalid filetype, end request and return error message.
-        if (mimetype !== 'application/json') {
+        if (
+            mimetype !== 'application/json' ||
+            !isValidFileName(filename)
+        ) {
             console.log("Invalid file type.");
             res.writeHead(500, { 'Connection': 'close' });
             res.end('Invalid filetype: File must be a JSON file!');

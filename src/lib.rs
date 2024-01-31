@@ -1,8 +1,13 @@
 use wasm_bindgen::prelude::*;
 use std::io;
+use std::slice;
 use std::io::prelude::*;
+use std::ffi::CString;
+use std::os::raw::c_char;
+use std::ptr;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
+use serde::{Serialize, Deserialize};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -31,18 +36,22 @@ impl DeCompressStrategy for JsonDeCompressor {
     }
 }
 
-#[wasm_bindgen]
-pub fn decompress_json(file_content: &[u8]) -> Result<String, JsValue> {
+#[no_mangle]
+pub extern "C" fn decompress_json(file_content: *const u8, len: usize) -> *mut c_char {
+    let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.
-    decompress_strategy.decompress(file_content)
-    .map_err(|e| JsValue::from_str(&e.to_string()))
+    let result = decompress_strategy.decompress(bytes);
+    let json_result = match result {
+        Ok(data) => serde_json::to_string(&data).unwrap_or_else(|_| "{\"error\": \"Failed to serialize data\"}".to_string()),
+        Err(e) => serde_json::to_string(&format!("{{\"error\": \"{}\"}}", e)).unwrap_or_else(|_| "{\"error\": \"Unknown error\"}".to_string()),
+    };
+    CString::new(json_result).unwrap().into_raw()
 }
-#[wasm_bindgen]
-pub fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, JsValue> {
+#[no_mangle]
+pub extern "C" fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let compress_strategy: JsonCompressor = JsonCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.
     compress_strategy.compress(file_content)
-    .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 

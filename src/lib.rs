@@ -59,3 +59,12 @@ pub extern "C" fn compress_json(file_content: *const u8, len: usize) -> *mut c_c
     CString::new(json_result).unwrap().into_raw()
 }
 
+#[no_mangle]
+pub extern "C" fn free_string(ptr: *mut c_char) {
+    unsafe {
+        if !ptr.is_null() {
+            let _ = CString::from_raw(ptr);
+        }
+    }
+}
+

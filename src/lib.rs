@@ -48,10 +48,17 @@ pub extern "C" fn decompress_json(file_content: *const u8, len: usize) -> *mut c
     };
     CString::new(json_result).unwrap().into_raw()
 }
+
 #[no_mangle]
-pub extern "C" fn compress_json(file_content: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+pub extern "C" fn compress_json(file_content: *const u8, len: usize) -> *mut c_char {
+    let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let compress_strategy: JsonCompressor = JsonCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.
-    compress_strategy.compress(file_content)
+    let result = compress_strategy.compress(bytes);
+    let json_result = match result {
+        Ok(data) => serde_json::to_string(&data).unwrap_or_else(|_| "{\"error\": \"Failed to serialize data\"}".to_string()),
+        Err(e) => serde_json::to_string(&format!("{{\"error\": \"{}\"}}", e)).unwrap_or_else(|_| "{\"error\": \"Unknown error\"}".to_string()),
+    };
+    CString::new(json_result).unwrap().into_raw()
 }
 

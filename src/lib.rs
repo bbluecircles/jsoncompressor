@@ -1,13 +1,10 @@
-use wasm_bindgen::prelude::*;
 use std::io;
-use std::slice;
 use std::io::prelude::*;
 use std::ffi::CString;
 use std::os::raw::c_char;
-use std::ptr;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
-use serde::{Serialize, Deserialize};
+use serde_json;
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;

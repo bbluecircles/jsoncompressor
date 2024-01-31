@@ -6,7 +6,6 @@ use std::sync::Mutex;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
 use lazy_static::lazy_static;
-use serde_json;
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -45,7 +44,7 @@ fn set_last_error(err: String) {
 }
 
 #[no_mangle]
-pub extern "C" fn decompress_json(file_content: *const u8, len: usize, out_len: *mut usize) -> *mut u8 {
+pub extern "C" fn decompress_json(file_content: *const u8, len: usize, out_len: *mut usize) -> *mut c_char {
     let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.
@@ -55,15 +54,13 @@ pub extern "C" fn decompress_json(file_content: *const u8, len: usize, out_len: 
 
             unsafe {
                 *out_len = data_length;
-                let to_boxed = decompressed_data.into_boxed_slice();
-                let ptr = Box::into_raw(to_boxed) as *mut u8;
-
-                ptr
+                CString::new(decompressed_data).unwrap().into_raw()
             }
         },
-        Err(e) {
+        Err(e) => {
             set_last_error(e.to_string());
-            std::ptr::null_mut()
+            let error = LAST_ERROR.lock().unwrap();
+            CString::new(error.clone()).unwrap().into_raw()
         }
     }
 }

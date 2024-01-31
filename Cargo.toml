@@ -9,8 +9,11 @@ edition = "2021"
 name = "jsoncompressor"
 crate-type = ["cdylib"]
 
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-gcc-ar"
+
 [dependencies]
-wasm-bindgen = "0.2.89"
 flate2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -46,6 +46,18 @@ fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
     });
 }
 
+// Filtering
+fn filter_items(items: &mut Vec<Value>, property_key: &str, filter_value: &str) -> Vec<Value> {
+    items.iter()
+        .filter(|item: &&Value|
+            item.get(property_key)
+                .and_then(Value::as_str)
+                .map_or(false, |val| val == filter_value)
+        )
+        .cloned()
+        .collect()
+}
+
 // Error handling 
 lazy_static! {
     static ref LAST_ERROR: Mutex<String> = Mutex::new(String::new());

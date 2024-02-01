@@ -107,7 +107,7 @@ fn set_last_error(err: String) {
 pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize, action: *const c_char, action_value: *const c_char) -> *mut c_char {
     let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
-    // Map the error into a JsValue type from the stringified error if error is returned.
+    // Decompress the JSON first, then check actions.
     match decompress_strategy.decompress(bytes) {
         Ok(decompressed_data) => {
             let data_length = decompressed_data.len();
@@ -117,13 +117,13 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                         assert!(!action.is_null());
                         CStr::from_ptr(action)
                     };
-                    // For this example we'll just sort desc.
                     let action_value_to_str: &CStr = unsafe {
                         assert!(!action_value.is_null());
                         CStr::from_ptr(action_value)
                     };
                     match action_type_to_str.to_str() {
                         Ok(str) => {
+                            // Extract action config.
                             let parsedActionValue: Value = match action_value_to_str.to_str() {
                                 Ok(val) => {
                                     serde_json::from_str(val).expect("JSON was not valid.")
@@ -133,6 +133,7 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                     serde_json::Value::String(msg)
                                 }
                             };
+                            // SORT
                             if str == "sort" {
                                 let field_to_sort = match parsedActionValue.get("field") {
                                     Some(value) => value.as_str().unwrap_or("No Value"),
@@ -147,7 +148,8 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                 match to_string(&to_sorted) {
                                     Ok(return_string) => {
                                         unsafe {
-                                            *out_len = data_length;
+                                            // Update the OUT length to the length of the decompressed Json AFTER the sort.
+                                            *out_len = return_string.len();
                                             CString::new(return_string).unwrap().into_raw()
                                         }
                                     },
@@ -158,6 +160,7 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                     }
                                 }
                             } else {
+                                // FILTER - Need to finish.
                                 // Then should be filter.
                                 CString::new(decompressed_data).unwrap().into_raw()
                             }

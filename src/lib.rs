@@ -1,6 +1,6 @@
 use std::io;
 use std::io::prelude::*;
-use std::ffi::{CString};
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::Mutex;
 use flate2::Compression;
@@ -68,7 +68,7 @@ fn set_last_error(err: String) {
 }
 
 #[no_mangle]
-pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize) -> *mut c_char {
+pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize, action: *const c_char, action_value: *const c_char) -> *mut c_char {
     let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
     // Map the error into a JsValue type from the stringified error if error is returned.
@@ -77,13 +77,46 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
             let data_length = decompressed_data.len();
             match from_str::<Vec<Value>>(&decompressed_data) {
                 Ok(mut data) => {
+                    let action_type_to_str: &CStr = unsafe {
+                        assert!(!action.is_null());
+                        CStr::from_ptr(action)
+                    };
                     // For this example we'll just sort desc.
-                    let to_sorted: () = sort_items(&mut data, "npi", false);
-                    match to_string(&to_sorted) {
-                        Ok(return_string) => {
-                            unsafe {
-                                *out_len = data_length;
-                                CString::new(return_string).unwrap().into_raw()
+                    let action_value_to_str: &CStr = unsafe {
+                        assert!(!action_value.is_null());
+                        CStr::from_ptr(action_value)
+                    };
+                    match action_type_to_str.to_str() {
+                        Ok(str) => {
+                            let parsedActionValue: Value = match action_value_to_str.to_str() {
+                                Ok(val) => {
+                                    serde_json::from_str(val).expect("JSON was not valid.")
+                                },
+                                Err(e) => {
+                                    let msg: String = "Failed to parse JSON".to_string();
+                                    serde_json::Value::String(msg)
+                                }
+                            };
+                            if str == "sort" {
+                                let Some(fieldToSort) = parsedActionValue.get("field").and_then(Value::as_str);
+                                let Some(dir) = parsedActionValue.get("dir").and_then(Value::as_str);
+                                let ascending: bool = dir == "asc";
+                                let to_sorted: () = sort_items(&mut data, fieldToSort, ascending);
+                                match to_string(&to_sorted) {
+                                    Ok(return_string) => {
+                                        unsafe {
+                                            *out_len = data_length;
+                                            CString::new(return_string).unwrap().into_raw()
+                                        }
+                                    },
+                                    Err(e) => {
+                                        set_last_error(e.to_string());
+                                        let error = LAST_ERROR.lock().unwrap();
+                                        CString::new(error.clone()).unwrap().into_raw()
+                                    }
+                                }
+                            } else {
+                                // Then should be filter.
                             }
                         },
                         Err(e) => {

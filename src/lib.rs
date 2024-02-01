@@ -35,12 +35,13 @@ impl DeCompressStrategy for JsonDeCompressor {
         Ok(s)
     }
 }
-
+#[derive(Serialize, Deserialize, Debug)]
 struct Filter {
     operator: String,
     value: serde_json::Value,
     field: String
 }
+#[derive(Serialize, Deserialize, Debug)]
 struct ComplexFilter {
     logic: String,
     filters: Vec<Filter>
@@ -57,15 +58,15 @@ fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
 }
 
 // Filtering
-fn filter_items(items: &mut Vec<Value>, property_key: &str, filter_value: &str) -> Vec<Value> {
-    items.iter()
-        .filter(|item: &&Value|
-            item.get(property_key)
-                .and_then(Value::as_str)
-                .map_or(false, |val| val == filter_value)
-        )
-        .cloned()
-        .collect()
+fn filter_items(items: &mut Vec<Value>, filter_value: &str) -> Vec<Value> {
+    let complex_filter: ComplexFilter = match from_str(filter_value) {
+        Ok(f) => f,
+        Err(_) => return Vec::new()
+    };
+
+    items.iter().filter(|item| {
+        apply_complex_filter(item, &complex_filter)
+    }).cloned().collect()
 }
 fn apply_complex_filter(item: &Value, complex_filter: &ComplexFilter) -> bool {
     match complex_filter.logic.as_str() {

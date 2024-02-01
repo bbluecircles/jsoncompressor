@@ -67,6 +67,31 @@ fn filter_items(items: &mut Vec<Value>, property_key: &str, filter_value: &str) 
         .cloned()
         .collect()
 }
+fn apply_complex_filter(item: &Value, complex_filter: &ComplexFilter) -> bool {
+    match complex_filter.logic.as_str() {
+        "AND" => complex_filter.filters.iter().all(|filter| {
+            apply_filter(item, filter)
+        }),
+        "OR" => complex_filter.filters.iter().any(|filter| {
+            apply_filter(item, filter)
+        }),
+        _ => false
+    }
+}
+
+fn apply_filter(item: &Value, filter: &Filter) -> bool {
+    match item.get(&filter.field) {
+        Some(item_value) => {
+            match filter.operator.as_str() {
+                "contains" => {
+                    item_value.to_string().contains(&filter.value.to_string())
+                },
+                _ => false
+            }
+        },
+        None => false
+    }
+}
 
 // Error handling 
 lazy_static! {

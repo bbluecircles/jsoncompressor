@@ -7,7 +7,7 @@ use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json, map::Map};
+use serde_json::{Value, json, map::Map, from_str, to_string};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -65,6 +65,47 @@ lazy_static! {
 fn set_last_error(err: String) {
     let mut last_error = LAST_ERROR.lock().unwrap();
     *last_error = err;
+}
+
+#[no_mangle]
+pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize) -> *mut c_char {
+    let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
+    let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
+    // Map the error into a JsValue type from the stringified error if error is returned.
+    match decompress_strategy.decompress(bytes) {
+        Ok(decompressed_data) => {
+            let data_length = decompressed_data.len();
+            match from_str::<Vec<Value>>(&decompressed_data) {
+                Ok(mut data) => {
+                    // For this example we'll just sort desc.
+                    let to_sorted: () = sort_items(&mut data, "npi", false);
+                    match to_string(&to_sorted) {
+                        Ok(return_string) => {
+                            unsafe {
+                                *out_len = data_length;
+                                CString::new(return_string).unwrap().into_raw()
+                            }
+                        },
+                        Err(e) => {
+                            set_last_error(e.to_string());
+                            let error = LAST_ERROR.lock().unwrap();
+                            CString::new(error.clone()).unwrap().into_raw()
+                        }
+                    }
+                },
+                Err(e) => {
+                    set_last_error(e.to_string());
+                    let error = LAST_ERROR.lock().unwrap();
+                    CString::new(error.clone()).unwrap().into_raw()
+                }
+            }
+        },
+        Err(e) => {
+            set_last_error(e.to_string());
+            let error = LAST_ERROR.lock().unwrap();
+            CString::new(error.clone()).unwrap().into_raw()
+        }
+    }
 }
 
 #[no_mangle]

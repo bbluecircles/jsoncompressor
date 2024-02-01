@@ -58,7 +58,7 @@ fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
 }
 
 // Filtering
-fn filter_items(items: &mut Vec<Value>, filter_value: &str) -> Vec<Value> {
+fn filter_items(items: &[Value], filter_value: &str) -> Vec<Value> {
     let complex_filter: ComplexFilter = match from_str(filter_value) {
         Ok(f) => f,
         Err(_) => return Vec::new()
@@ -153,6 +153,7 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                 }
                             } else {
                                 // Then should be filter.
+
                             }
                         },
                         Err(e) => {

@@ -6,6 +6,8 @@ use std::sync::Mutex;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json, map::Map};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -32,6 +34,16 @@ impl DeCompressStrategy for JsonDeCompressor {
         gz.read_to_string(&mut s)?;
         Ok(s)
     }
+}
+
+// Sorting
+fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
+    items.sort_by(|a: &Value, b: &Value| {
+        let a_val: &str = a.get(property_key).and_then(Value::as_str).unwrap_or_default();
+        let b_val: &str = b.get(property_key).and_then(Value::as_str).unwrap_or_default();
+        let ord = a_val.cmp(&b_val);
+        if ascending { ord } else { ord.reverse() }
+    });
 }
 
 // Error handling 

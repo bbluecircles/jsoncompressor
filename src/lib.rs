@@ -134,10 +134,16 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                 }
                             };
                             if str == "sort" {
-                                let Some(fieldToSort) = parsedActionValue.get("field").and_then(Value::as_str);
-                                let Some(dir) = parsedActionValue.get("dir").and_then(Value::as_str);
+                                let field_to_sort = match parsedActionValue.get("field") {
+                                    Some(value) => value.as_str().unwrap_or("No Value"),
+                                    None => "No Value"
+                                };
+                                let dir = match parsedActionValue.get("dir") {
+                                    Some(value) => value.as_str().unwrap_or("desc"),
+                                    None => "desc"
+                                };
                                 let ascending: bool = dir == "asc";
-                                let to_sorted: () = sort_items(&mut data, fieldToSort, ascending);
+                                let to_sorted: () = sort_items(&mut data, field_to_sort, ascending);
                                 match to_string(&to_sorted) {
                                     Ok(return_string) => {
                                         unsafe {
@@ -153,7 +159,7 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
                                 }
                             } else {
                                 // Then should be filter.
-
+                                CString::new(decompressed_data).unwrap().into_raw()
                             }
                         },
                         Err(e) => {

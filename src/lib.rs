@@ -36,6 +36,16 @@ impl DeCompressStrategy for JsonDeCompressor {
     }
 }
 
+struct Filter {
+    operator: String,
+    value: serde_json::Value,
+    field: String
+}
+struct ComplexFilter {
+    logic: String,
+    filters: Vec<Filter>
+}
+
 // Sorting
 fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
     items.sort_by(|a: &Value, b: &Value| {

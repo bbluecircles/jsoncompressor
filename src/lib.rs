@@ -1,6 +1,6 @@
 use std::io;
 use std::io::prelude::*;
-use std::ffi::{CString};
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::sync::Mutex;
 use flate2::Compression;
@@ -38,6 +38,17 @@ impl DeCompressStrategy for JsonDeCompressor {
         Ok(s)
     }
 }
+#[derive(Serialize, Deserialize, Debug)]
+struct Filter {
+    operator: String,
+    value: serde_json::Value,
+    field: String
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct ComplexFilter {
+    logic: String,
+    filters: Vec<Filter>
+}
 
 // Sorting
 fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
@@ -50,15 +61,40 @@ fn sort_items(items: &mut Vec<Value>, property_key: &str, ascending: bool) {
 }
 
 // Filtering
-fn filter_items(items: &mut Vec<Value>, property_key: &str, filter_value: &str) -> Vec<Value> {
-    items.iter()
-        .filter(|item: &&Value|
-            item.get(property_key)
-                .and_then(Value::as_str)
-                .map_or(false, |val| val == filter_value)
-        )
-        .cloned()
-        .collect()
+fn filter_items(items: &[Value], filter_value: &str) -> Vec<Value> {
+    let complex_filter: ComplexFilter = match from_str(filter_value) {
+        Ok(f) => f,
+        Err(_) => return Vec::new()
+    };
+
+    items.iter().filter(|item| {
+        apply_complex_filter(item, &complex_filter)
+    }).cloned().collect()
+}
+fn apply_complex_filter(item: &Value, complex_filter: &ComplexFilter) -> bool {
+    match complex_filter.logic.as_str() {
+        "AND" => complex_filter.filters.iter().all(|filter| {
+            apply_filter(item, filter)
+        }),
+        "OR" => complex_filter.filters.iter().any(|filter| {
+            apply_filter(item, filter)
+        }),
+        _ => false
+    }
+}
+
+fn apply_filter(item: &Value, filter: &Filter) -> bool {
+    match item.get(&filter.field) {
+        Some(item_value) => {
+            match filter.operator.as_str() {
+                "contains" => {
+                    item_value.to_string().contains(&filter.value.to_string())
+                },
+                _ => false
+            }
+        },
+        None => false
+    }
 }
 
 // Error handling 
@@ -71,22 +107,65 @@ fn set_last_error(err: String) {
 }
 
 #[no_mangle]
-pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize) -> *mut c_char {
+pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize, action: *const c_char, action_value: *const c_char) -> *mut c_char {
     let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
-    // Map the error into a JsValue type from the stringified error if error is returned.
+    // Decompress the JSON first, then check actions.
     match decompress_strategy.decompress(bytes) {
         Ok(decompressed_data) => {
             let data_length = decompressed_data.len();
             match from_str::<Vec<Value>>(&decompressed_data) {
                 Ok(mut data) => {
-                    // For this example we'll just sort desc.
-                    let to_sorted: () = sort_items(&mut data, "npi", false);
-                    match to_string(&to_sorted) {
-                        Ok(return_string) => {
-                            unsafe {
-                                *out_len = data_length;
-                                CString::new(return_string).unwrap().into_raw()
+                    let action_type_to_str: &CStr = unsafe {
+                        assert!(!action.is_null());
+                        CStr::from_ptr(action)
+                    };
+                    let action_value_to_str: &CStr = unsafe {
+                        assert!(!action_value.is_null());
+                        CStr::from_ptr(action_value)
+                    };
+                    match action_type_to_str.to_str() {
+                        Ok(str) => {
+                            // Extract action config.
+                            let parsedActionValue: Value = match action_value_to_str.to_str() {
+                                Ok(val) => {
+                                    serde_json::from_str(val).expect("JSON was not valid.")
+                                },
+                                Err(e) => {
+                                    let msg: String = "Failed to parse JSON".to_string();
+                                    serde_json::Value::String(msg)
+                                }
+                            };
+                            // SORT
+                            if str == "sort" {
+                                let field_to_sort = match parsedActionValue.get("field") {
+                                    Some(value) => value.as_str().unwrap_or("No Value"),
+                                    None => "No Value"
+                                };
+                                let dir = match parsedActionValue.get("dir") {
+                                    Some(value) => value.as_str().unwrap_or("desc"),
+                                    None => "desc"
+                                };
+                                let ascending: bool = dir == "asc";
+                                let to_sorted: () = sort_items(&mut data, field_to_sort, ascending);
+                                match to_string(&to_sorted) {
+                                    Ok(return_string) => {
+                                        unsafe {
+                                            // Update the OUT length to the length of the decompressed Json AFTER the sort.
+                                            *out_len = return_string.len();
+                                            CString::new(return_string).unwrap().into_raw()
+                                        }
+                                    },
+                                    Err(e) => {
+                                        set_last_error(e.to_string());
+                                        let error = LAST_ERROR.lock().unwrap();
+                                        CString::new(error.clone()).unwrap().into_raw()
+                                    }
+                                }
+                            } else {
+                                // FILTER - Need to finish.
+                                // Then should be filter.
+                                CString::new(decompressed_data).unwrap().into_raw()
                             }
                         },
                         Err(e) => {

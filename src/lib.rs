@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, u8};
 use std::io::prelude::*;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
@@ -186,6 +186,21 @@ pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: u
             set_last_error(e.to_string());
             let error = LAST_ERROR.lock().unwrap();
             CString::new(error.clone()).unwrap().into_raw()
+        }
+    }
+}
+
+pub fn decompress_json_locally(bytes: &[u8]) -> Value {
+    let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
+
+    match decompress_strategy.decompress(bytes) {
+        Ok(decompressed_data) => {
+            let parsed: Value = serde_json::from_str(&decompressed_data).expect("Parsing decompressed failed.");
+            parsed
+        },
+        Err(e) => {
+            let err_json: Value = serde_json::from_str(r#"{ "Error": "Something went wrong." }"#).expect("Failed.");
+            err_json
         }
     }
 }

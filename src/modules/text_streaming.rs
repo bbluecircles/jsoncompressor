@@ -2,6 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use serde_json::Value;
 
 // Mutex for streaming data into the program.
 lazy_static! {
@@ -10,7 +11,12 @@ lazy_static! {
 
 // Mutex for streaming data out of the program.
 lazy_static! {
-    static ref DATA_TO_WRITE: Mutex::new(String::new())
+    static ref WRITTEN_DATA: Mutex<Vec<Value>> = Mutex::new(Vec::new());
 }
 
-
+// Expose the following functions.
+pub fn process_text_chunk<F>(bytes: u8, mapFunc: F) where F: Fn(u8) -> Value {
+    let bytes_to_json: Value = mapFunc(bytes);
+    let mut data = WRITTEN_DATA.lock().unwrap();
+    data.push(bytes_to_json);
+}

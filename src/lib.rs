@@ -9,6 +9,9 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, map::Map, from_str, to_string};
 
+mod modules;
+use modules::text_streaming;
+
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
 }

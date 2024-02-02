@@ -1,5 +1,8 @@
 {
     "cSpell.words": [
         "crossorigin"
+    ],
+    "rust-analyzer.linkedProjects": [
+        ".\\Cargo.toml"
     ]
 }

@@ -30,9 +30,9 @@ pub fn extract_written_data() -> Vec<Value> {
 }
 
 // Update WRITTEN_DATA value.
-pub fn update_written_data(actionType: String, replacedData: Vec<Value>) {
-    if actionType == "sort" {
+pub fn update_written_data(action_type: String, replaced_data: Vec<Value>) {
+    if action_type == "sort" {
         let mut data = WRITTEN_DATA.lock().unwrap();
-        *data = replacedData;
+        *data = replaced_data;
     }
 }

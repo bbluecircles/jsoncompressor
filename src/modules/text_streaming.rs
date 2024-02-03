@@ -18,8 +18,8 @@ lazy_static! {
     static ref WRITTEN_DATA_FILTERED: Mutex<Vec<Value>> = Mutex::new(Vec::new());
 }
 // Expose the following functions.
-pub fn process_text_chunk<F>(bytes: &[u8], mapFunc: F) where F: Fn(&[u8]) -> Value {
-    let bytes_to_json: Value = mapFunc(bytes);
+pub fn process_text_chunk<F>(bytes: &[u8], map_func: F) where F: Fn(&[u8]) -> Value {
+    let bytes_to_json: Value = map_func(bytes);
     let mut data = WRITTEN_DATA.lock().unwrap();
     data.push(bytes_to_json);
 }

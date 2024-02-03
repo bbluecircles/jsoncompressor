@@ -106,6 +106,7 @@ fn set_last_error(err: String) {
     *last_error = err;
 }
 
+#[no_mangle]
 pub extern "C" fn process_streamed_json(chunk_content: *const u8, chunk_len: usize) {
     let bytes = unsafe { std::slice::from_raw_parts(chunk_content, chunk_len) }; 
     process_text_chunk(bytes, decompress_json_locally);

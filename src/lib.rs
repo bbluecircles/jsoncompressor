@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, map::Map, from_str, to_string};
 
 mod modules;
-use modules::text_streaming::{self, extract_written_data, process_text_chunk};
+use modules::text_streaming::{self, extract_written_data, process_text_chunk, update_written_data};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -112,94 +112,49 @@ pub extern "C" fn process_streamed_json(chunk_content: *const u8, chunk_len: usi
 }
 
 #[no_mangle]
-pub extern "C" fn run_action_on_processed_json() {
-    let jsonData: Vec<Value> = extract_written_data();
-
-}
-
-#[no_mangle]
-pub extern "C" fn decompress_json_and_run_action(file_content: *const u8, len: usize, out_len: *mut usize, action: *const c_char, action_value: *const c_char) -> *mut c_char {
-    let bytes = unsafe { std::slice::from_raw_parts(file_content, len) }; 
-    let decompress_strategy: JsonDeCompressor = JsonDeCompressor;
-    // Decompress the JSON first, then check actions.
-    match decompress_strategy.decompress(bytes) {
-        Ok(decompressed_data) => {
-            let data_length = decompressed_data.len();
-            match from_str::<Vec<Value>>(&decompressed_data) {
-                Ok(mut data) => {
-                    let action_type_to_str: &CStr = unsafe {
-                        assert!(!action.is_null());
-                        CStr::from_ptr(action)
-                    };
-                    let action_value_to_str: &CStr = unsafe {
-                        assert!(!action_value.is_null());
-                        CStr::from_ptr(action_value)
-                    };
-                    match action_type_to_str.to_str() {
-                        Ok(str) => {
-                            // Extract action config.
-                            let parsedActionValue: Value = match action_value_to_str.to_str() {
-                                Ok(val) => {
-                                    serde_json::from_str(val).expect("JSON was not valid.")
-                                },
-                                Err(e) => {
-                                    let msg: String = "Failed to parse JSON".to_string();
-                                    serde_json::Value::String(msg)
-                                }
-                            };
-                            // SORT
-                            if str == "sort" {
-                                let field_to_sort = match parsedActionValue.get("field") {
-                                    Some(value) => value.as_str().unwrap_or("No Value"),
-                                    None => "No Value"
-                                };
-                                let dir = match parsedActionValue.get("dir") {
-                                    Some(value) => value.as_str().unwrap_or("desc"),
-                                    None => "desc"
-                                };
-                                let ascending: bool = dir == "asc";
-                                let to_sorted: () = sort_items(&mut data, field_to_sort, ascending);
-                                match to_string(&to_sorted) {
-                                    Ok(return_string) => {
-                                        unsafe {
-                                            // Update the OUT length to the length of the decompressed Json AFTER the sort.
-                                            *out_len = return_string.len();
-                                            CString::new(return_string).unwrap().into_raw()
-                                        }
-                                    },
-                                    Err(e) => {
-                                        set_last_error(e.to_string());
-                                        let error = LAST_ERROR.lock().unwrap();
-                                        CString::new(error.clone()).unwrap().into_raw()
-                                    }
-                                }
-                            } else {
-                                // FILTER - Need to finish.
-                                // Then should be filter.
-                                CString::new(decompressed_data).unwrap().into_raw()
-                            }
-                        },
-                        Err(e) => {
-                            set_last_error(e.to_string());
-                            let error = LAST_ERROR.lock().unwrap();
-                            CString::new(error.clone()).unwrap().into_raw()
-                        }
-                    }
+pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_value: *const c_char) {
+    let mut data: Vec<Value> = extract_written_data();
+    let action_type_to_str: &CStr = unsafe {
+        assert!(!action.is_null());
+        CStr::from_ptr(action)
+    };
+    let action_value_to_str: &CStr = unsafe {
+        assert!(!action_value.is_null());
+        CStr::from_ptr(action_value)
+    };
+    match action_type_to_str.to_str() {
+        Ok(str) => {
+            // Extract action config.
+            let parsed_action_value: Value = match action_value_to_str.to_str() {
+                Ok(val) => {
+                    serde_json::from_str(val).expect("JSON was not valid.")
                 },
                 Err(e) => {
-                    set_last_error(e.to_string());
-                    let error = LAST_ERROR.lock().unwrap();
-                    CString::new(error.clone()).unwrap().into_raw()
+                    let msg: String = "Failed to parse JSON".to_string();
+                    serde_json::Value::String(msg)
                 }
-            }
+            };
+            // SORT
+            if str == "sort" {
+                let field_to_sort = match parsed_action_value.get("field") {
+                    Some(value) => value.as_str().unwrap_or("No Value"),
+                    None => "No Value"
+                };
+                let dir = match parsed_action_value.get("dir") {
+                    Some(value) => value.as_str().unwrap_or("desc"),
+                    None => "desc"
+                };
+                let ascending: bool = dir == "asc";
+                sort_items(&mut data, field_to_sort, ascending);
+                update_written_data("sort".to_string(), data);
+            } 
         },
         Err(e) => {
             set_last_error(e.to_string());
-            let error = LAST_ERROR.lock().unwrap();
-            CString::new(error.clone()).unwrap().into_raw()
         }
     }
 }
+
 
 pub fn decompress_json_locally(bytes: &[u8]) -> Value {
     let decompress_strategy: JsonDeCompressor = JsonDeCompressor;

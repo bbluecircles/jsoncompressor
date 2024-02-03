@@ -13,10 +13,6 @@ lazy_static! {
 lazy_static! {
     static ref WRITTEN_DATA: Mutex<Vec<Value>> = Mutex::new(Vec::new());
 }
-// For running filters on the written data.
-lazy_static! {
-    static ref WRITTEN_DATA_FILTERED: Mutex<Vec<Value>> = Mutex::new(Vec::new());
-}
 // Expose the following functions.
 pub fn process_text_chunk<F>(bytes: &[u8], map_func: F) where F: Fn(&[u8]) -> Value {
     let bytes_to_json: Value = map_func(bytes);
@@ -30,9 +26,7 @@ pub fn extract_written_data() -> Vec<Value> {
 }
 
 // Update WRITTEN_DATA value.
-pub fn update_written_data(action_type: String, replaced_data: Vec<Value>) {
-    if action_type == "sort" {
-        let mut data = WRITTEN_DATA.lock().unwrap();
-        *data = replaced_data;
-    }
+pub fn update_written_data(replaced_data: Vec<Value>) {
+    let mut data = WRITTEN_DATA.lock().unwrap();
+    *data = replaced_data;
 }

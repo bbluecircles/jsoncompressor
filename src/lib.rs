@@ -147,7 +147,7 @@ pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_val
                 let ascending: bool = dir == "asc";
                 sort_items(&mut data, field_to_sort, ascending);
             } 
-            update_written_data(str.to_string(), data);
+            update_written_data(data);
         },
         Err(e) => {
             set_last_error(e.to_string());

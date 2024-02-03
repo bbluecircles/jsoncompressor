@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, map::Map, from_str, to_string};
 
 mod modules;
-use modules::text_streaming;
+use modules::text_streaming::{self, extract_written_data, process_text_chunk};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -104,6 +104,17 @@ lazy_static! {
 fn set_last_error(err: String) {
     let mut last_error = LAST_ERROR.lock().unwrap();
     *last_error = err;
+}
+
+pub extern "C" fn process_streamed_json(chunk_content: *const u8, chunk_len: usize) {
+    let bytes = unsafe { std::slice::from_raw_parts(chunk_content, chunk_len) }; 
+    process_text_chunk(bytes, decompress_json_locally);
+}
+
+#[no_mangle]
+pub extern "C" fn run_action_on_processed_json() {
+    let jsonData: Vec<Value> = extract_written_data();
+
 }
 
 #[no_mangle]

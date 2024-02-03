@@ -15,8 +15,13 @@ lazy_static! {
 }
 
 // Expose the following functions.
-pub fn process_text_chunk<F>(bytes: u8, mapFunc: F) where F: Fn(u8) -> Value {
+pub fn process_text_chunk<F>(bytes: &[u8], mapFunc: F) where F: Fn(&[u8]) -> Value {
     let bytes_to_json: Value = mapFunc(bytes);
     let mut data = WRITTEN_DATA.lock().unwrap();
     data.push(bytes_to_json);
+}
+
+// Extract written data (should only be called by `run_action_on_processed_json`)
+pub fn extract_written_data() -> Vec<Value> {
+    return WRITTEN_DATA.lock().unwrap().to_vec();
 }

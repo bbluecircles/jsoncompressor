@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, map::Map, from_str, to_string};
 
 mod modules;
-use modules::text_streaming::{self, extract_written_data, process_text_chunk, update_written_data};
+use modules::text_streaming::{self, extract_written_data, initialize_json_streaming, process_text_chunk, update_written_data};
 
 trait CompressStrategy {
     fn compress(&self, input: &[u8]) -> Result<Vec<u8>, std::io::Error>;
@@ -148,6 +148,8 @@ pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_val
                 sort_items(&mut data, field_to_sort, ascending);
             } 
             update_written_data(data);
+            // Begin preparing the JSON for streaming.
+            initialize_json_streaming();
         },
         Err(e) => {
             set_last_error(e.to_string());

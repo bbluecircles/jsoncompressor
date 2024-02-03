@@ -6,7 +6,8 @@ use serde_json::Value;
 
 // Mutex for streaming data into the program.
 lazy_static! {
-    static ref READ_CURRENT_POS: Mutex<usize> = Mutex::new(0);
+    static ref SERIALIZED_JSON_DATA: Mutex<Option<String>> = Mutex::new(None);
+    static ref READ_POSITION: Mutex<usize> = Mutex::new(0);
 }
 
 // Mutex for streaming data out of the program.
@@ -29,4 +30,13 @@ pub fn extract_written_data() -> Vec<Value> {
 pub fn update_written_data(replaced_data: Vec<Value>) {
     let mut data = WRITTEN_DATA.lock().unwrap();
     *data = replaced_data;
+}
+
+pub fn initialize_json_streaming() {
+    let data = WRITTEN_DATA.lock().unwrap().to_vec();
+    let to_serialized = serde_json::to_string(&data).expect("Failed to serialize the JSON.");
+    let mut serialized_data = SERIALIZED_JSON_DATA.lock().unwrap();
+    *serialized_data = Some(to_serialized);
+    let mut read_position = READ_POSITION.lock().unwrap();
+    *read_position = 0;
 }

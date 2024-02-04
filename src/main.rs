@@ -1,5 +1,6 @@
 
 fn main() {
+    env_logger::init();
     // let should_decompress: bool = true;
     // let mut file_path = String::new();
     

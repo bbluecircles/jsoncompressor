@@ -2,6 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use log::info;
 use serde_json::Value;
 
 // Mutex for streaming data into the program.
@@ -35,6 +36,7 @@ pub fn update_written_data(replaced_data: Vec<Value>) {
 pub fn initialize_json_streaming() {
     let data = WRITTEN_DATA.lock().unwrap().to_vec();
     let to_serialized = serde_json::to_string(&data).expect("Failed to serialize the JSON.");
+    info!("To serialized after action: {}", to_serialized);
     let mut serialized_data = SERIALIZED_JSON_DATA.lock().unwrap();
     *serialized_data = Some(to_serialized);
     let mut read_position = READ_POSITION.lock().unwrap();

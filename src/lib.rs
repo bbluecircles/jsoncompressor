@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use flate2::Compression;
 use flate2::bufread::{GzDecoder, GzEncoder};
 use lazy_static::lazy_static;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, map::Map, from_str, to_string};
 
@@ -114,6 +115,7 @@ pub extern "C" fn process_streamed_json(chunk_content: *const u8, chunk_len: usi
 
 #[no_mangle]
 pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_value: *const c_char) {
+    info!("Starting action.");
     let mut data: Vec<Value> = extract_written_data();
     let action_type_to_str: &CStr = unsafe {
         assert!(!action.is_null());
@@ -132,6 +134,7 @@ pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_val
                 },
                 Err(e) => {
                     let msg: String = "Failed to parse JSON".to_string();
+                    warn!("Something went wrong parsing action value: {}", msg);
                     serde_json::Value::String(msg)
                 }
             };
@@ -146,15 +149,30 @@ pub extern "C" fn run_action_on_processed_json(action: *const c_char, action_val
                     None => "desc"
                 };
                 let ascending: bool = dir == "asc";
+                info!("About to attempt a sort.");
                 sort_items(&mut data, field_to_sort, ascending);
             } 
+            info!("About to update written data");
             update_written_data(data);
             // Begin preparing the JSON for streaming.
             initialize_json_streaming();
         },
         Err(e) => {
             set_last_error(e.to_string());
+            warn!("Something went wrong parsing action type: {}", e.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    #[test]
+    fn test_run_action_on_processed_json() {
+        let input = CSString::new("sort").expect("CString::new failed")
+        let ptr = input.as_ptr();
     }
 }
 

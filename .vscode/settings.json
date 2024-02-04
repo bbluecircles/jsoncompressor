@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
-        "crossorigin"
+        "crossorigin",
+        "nonoverlapping"
     ],
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml"
